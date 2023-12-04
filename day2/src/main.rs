@@ -2,7 +2,7 @@ use std::fs;
 
 struct GameResults {
     sum: u32,
-    powers: u32
+    powers: u32,
 }
 
 fn main() {
@@ -46,11 +46,9 @@ fn all_powers_per_game(file_contents: String) -> u32 {
 fn valid_game_id(line: &str, r: u16, g: u16, b: u16) -> u16 {
     let game_and_info: Vec<&str> = line.split(':').collect();
     if game_and_info.len() < 2 {
-        return 0
+        return 0;
     }
-    let game_number = game_and_info[0]
-        .split(' ')
-        .collect::<Vec<&str>>()[1]
+    let game_number = game_and_info[0].split(' ').collect::<Vec<&str>>()[1]
         .parse::<u16>()
         .expect("Was hoping for a game number here...");
 
@@ -65,11 +63,11 @@ fn valid_game_id(line: &str, r: u16, g: u16, b: u16) -> u16 {
 
 fn min_items_per_game(game: &str) -> u32 {
     let mut sums = 0;
-    
+
     let game_and_info: Vec<&str> = game.split(':').collect();
 
     if game_and_info.len() < 2 {
-        return 0
+        return 0;
     }
 
     let mut min_r = 0;
@@ -77,7 +75,6 @@ fn min_items_per_game(game: &str) -> u32 {
     let mut min_b = 0;
 
     for stage in game_and_info[1].split(';').collect::<Vec<&str>>() {
-
         for ball_shown in stage.split(',').collect::<Vec<&str>>() {
             let qty_and_colour: Vec<&str> = ball_shown.split(' ').collect();
             let qty = qty_and_colour[1].parse::<u32>().unwrap();
@@ -109,7 +106,7 @@ fn stage_is_valid(stage: &str, r: u16, g: u16, b: u16) -> bool {
             "red" => r_qty += u16::from(qty),
             "green" => g_qty += u16::from(qty),
             "blue" => b_qty += u16::from(qty),
-            _ => return false
+            _ => return false,
         }
     }
     r_qty <= r && g_qty <= g && b_qty <= b
