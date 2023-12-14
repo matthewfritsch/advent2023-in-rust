@@ -1,88 +1,100 @@
-use std::fs;
-use std::cmp::min;
 use std::cmp::max;
-
-struct PartNumber {
-    is_setup: bool,
-    row_idx: usize,
-    start_idx: usize,
-    end_idx: usize,
-    number: u32,
-}
-
-impl PartNumber {
-    fn new() -> PartNumber{
-        PartNumber {
-            is_setup: false,
-            row_idx: 0,
-            start_idx: 0,
-            end_idx: 0,
-            number: 0,
-        }
-    }
-
-    fn add_info(&mut self, num: u32, row: usize, colidx: usize) {
-        if !self.is_setup {
-            self.is_setup = true;
-            self.row_idx = row;
-            self.start_idx = colidx;
-        }
-        self.end_idx = colidx;
-        self.number = self.number * 10 + num;
-    }
-}
+use std::cmp::min;
+use std::collections::HashMap;
+use std::fs;
 
 fn main() {
     let file_contents = fs::read_to_string("input.txt").expect("File not found.");
+    let input_text: Vec<&str> = file_contents.lines().collect();
 
-    let input_vec2: Vec<&str> = file_contents.lines().collect();
-
-    let part_locs = find_part_locs(&input_vec2);
-    for pl in part_locs {
-        dbg!(pl.number);
-    }
-    // let part_sums = sum_of_parts(part_locs);
+    let part_sum = find_all_parts(&input_text);
+    println!("Total: {}", part_sum);
 }
 
-fn find_part_locs(vec2: &Vec<&str>) -> Vec<PartNumber> {
-    let mut all_parts: Vec<PartNumber> = Vec::new();
-    let mut curr_partnum = PartNumber::new();
-
+fn find_all_parts(vec2: &Vec<&str>) -> u32 {
+    let mut all_parts_sum: u32 = 0;
+    let mut curr_part: u32 = 0;
+    let mut start_idx: usize = 0;
+    let mut possible_gears: HashMap<(usize, usize), Vec<u32>> = HashMap::new();
     for line_idx in 0..vec2.len() {
-        let line = vec2[line_idx];
-        let line_chars: Vec<char> = line.chars().collect();
-        for char_idx in 0..line.len() {
+        let line_chars: Vec<char> = vec2[line_idx].chars().collect();
+        for char_idx in 0..line_chars.len() {
             let char = line_chars[char_idx];
             if char.is_digit(10) {
-                curr_partnum.add_info(
-                    char.to_digit(10).unwrap(),
+                if curr_part == 0 {
+                    start_idx = char_idx;
+                }
+                curr_part = (curr_part * 10) + char.to_digit(10).unwrap();
+            } else if curr_part > 0 {
+                if is_valid_partnum(
                     line_idx,
-                    char_idx
-                );
-            } else if curr_partnum.is_setup && is_valid_partnum(&curr_partnum, vec2) {
-                all_parts.push(curr_partnum);
-                curr_partnum = PartNumber::new();
+                    start_idx,
+                    char_idx - 1,
+                    curr_part,
+                    vec2,
+                    &mut possible_gears,
+                ) {
+                    all_parts_sum += curr_part;
+                }
+                curr_part = 0;
             }
+        }
+        if curr_part > 0 {
+            if is_valid_partnum(
+                line_idx,
+                start_idx,
+                line_chars.len() - 1,
+                curr_part,
+                vec2,
+                &mut possible_gears,
+            ) {
+                all_parts_sum += curr_part;
+            }
+            curr_part = 0;
         }
     }
 
-    all_parts
+    let mut gear_sum: u32 = 0;
+    for key in possible_gears.keys() {
+        if possible_gears.get(key).unwrap().len() != 2 {
+            continue;
+        }
+        let gear_vals = possible_gears.get(key).unwrap();
+        gear_sum += gear_vals[0] * gear_vals[1];
+    }
+    println!("Gear sum: {gear_sum}");
+
+    all_parts_sum
 }
 
-fn is_valid_partnum(partnum: &PartNumber, vec2: &Vec<&str>) -> bool {
-    let min_row = max(0, (partnum.row_idx as i32) - 1);
-    let max_row = min(vec2.len()-1, partnum.row_idx+1);
-    let min_col = max(0, (partnum.start_idx as i32) - 1);
-    let max_col = min(vec2[0].len()-1, partnum.end_idx+1);
+fn is_valid_partnum(
+    line_idx: usize,
+    start_idx: usize,
+    end_idx: usize,
+    value: u32,
+    vec2: &Vec<&str>,
+    possible_gears: &mut HashMap<(usize, usize), Vec<u32>>,
+) -> bool {
+    let min_row = max(0, (line_idx as i32) - 1) as usize;
+    let max_row = min(vec2.len() - 1, line_idx + 1);
+    let min_col = max(0, (start_idx as i32) - 1) as usize;
+    let max_col = min(vec2[line_idx].len() - 1, end_idx + 1);
 
     for row in min_row..=max_row {
         let curr_row = vec2[row];
+
         for col in min_col..=max_col {
-            if row == partnum.row_idx && (partnum.start_idx <= col && partnum.end_idx >= col) {
+            if row == line_idx && (start_idx <= col && end_idx >= col) {
                 continue;
             }
             let val: char = curr_row.chars().nth(col).unwrap();
-            if val != '.' && !val.is_digit(10) {
+            if val != '.' && val != '.' && val != '\n' && !val.is_digit(10) {
+                if val == '*' {
+                    possible_gears
+                        .entry((row, col))
+                        .and_modify(|e| e.push(value))
+                        .or_insert(vec![value]);
+                }
                 return true;
             }
         }
