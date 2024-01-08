@@ -12,7 +12,6 @@ fn get_cards(lines: Vec<&str>) -> u32 {
     let mut card_counts = vec![1; lines.len()];
     let mut curr_card = 1;
     for line in lines {
-        println!("Working with '{}'", line);
         let curr_card_qty = card_counts[curr_card - 1];
         if curr_card_qty == 0 {
             break;
@@ -34,17 +33,9 @@ fn get_cards(lines: Vec<&str>) -> u32 {
             .filter(|x| card.contains(x))
             .collect::<Vec<u8>>()
             .len();
-        println!("Found {} matches", matches);
-        println!(
-            "Setting values from {} to {} with {}",
-            curr_card,
-            curr_card + min(matches, card_counts.len() - 1),
-            curr_card_qty
-        );
         for card_idx in 1..=min(matches, card_counts.len() - 1) {
             card_counts[curr_card + card_idx - 1] += curr_card_qty;
         }
-        dbg!(&card_counts);
         curr_card += 1;
     }
 
